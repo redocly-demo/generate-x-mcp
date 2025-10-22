@@ -1,0 +1,28 @@
+{
+  "name": "generate-x-mcp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "generate-x-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --format=esm",
+    "start": "tsx src/index.ts"
+  },
+  "keywords": [],
+  "author": "Roman Hotsiy <roman@redocly.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.9.1",
+    "@types/yargs": "^17.0.33",
+    "esbuild": "^0.25.11",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "@modelcontextprotocol/sdk": "^1.20.1",
+    "js-yaml": "^4.1.0",
+    "yargs": "^18.0.0"
+  }
+}
