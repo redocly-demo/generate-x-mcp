@@ -1,6 +1,6 @@
 {
-  "name": "generate-x-mcp",
-  "version": "1.0.0",
+  "name": "@redocly/generate-x-mcp",
+  "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
   "type": "module",
