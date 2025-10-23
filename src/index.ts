@@ -78,7 +78,7 @@ async function main() {
     },
   });
 
-  mcp.connect(transport);
+  await mcp.connect(transport);
 
   try {
     // Wait for connection to be established

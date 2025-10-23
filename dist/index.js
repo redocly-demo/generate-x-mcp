@@ -21068,7 +21068,7 @@ async function main() {
       });
     }
   });
-  mcp.connect(transport);
+  await mcp.connect(transport);
   try {
     await new Promise((resolve5) => setTimeout(resolve5, 1e3));
     const { tools } = await mcp.listTools();
