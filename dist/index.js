@@ -21124,7 +21124,6 @@ async function main() {
     });
     openapi["x-mcp"].capabilities = capabilities;
     openapi["x-mcp"].tools = mergedTools;
-    console.log("capabilities", capabilities);
     fs.writeFileSync(openapiFilePath, js_yaml_default.dump(openapi));
     if (openapiFileExists) {
       console.log(`Successfully updated ${openapiFilePath}`);
