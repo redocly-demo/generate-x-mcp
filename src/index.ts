@@ -147,8 +147,6 @@ async function main() {
     openapi['x-mcp'].capabilities = capabilities;
     openapi['x-mcp'].tools = mergedTools;
 
-    console.log('capabilities', capabilities);
-
     fs.writeFileSync(openapiFilePath, yaml.dump(openapi));
 
     if (openapiFileExists) {
