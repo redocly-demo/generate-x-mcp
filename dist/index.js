@@ -21133,7 +21133,7 @@ async function main() {
       console.log("\u26A0\uFE0F Please update the file with more information.");
     }
   } finally {
-    mcp.close();
+    await mcp.close();
   }
 }
 main().catch((error) => {

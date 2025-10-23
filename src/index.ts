@@ -158,7 +158,7 @@ async function main() {
       console.log('⚠️ Please update the file with more information.');
     }
   } finally {
-    mcp.close();
+    await mcp.close();
   }
 }
 
