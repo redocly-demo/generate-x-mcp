@@ -71,7 +71,7 @@ async function main() {
       if (!('Content-Type' in requestHeaders)) {
         requestHeaders['Content-Type'] = 'application/json';
       }
-      
+
       if (!('Mcp-Session-Id' in requestHeaders) && mcp.transport?.sessionId) {
         requestHeaders['Mcp-Session-Id'] = mcp.transport?.sessionId;
       }
@@ -174,11 +174,25 @@ async function main() {
 
     const mergedPrompts = prompts.map(prompt => {
       const existingPrompt = existingPromptsMap.get(prompt.name) as any;
+      const existingArguments = existingPrompt?.arguments || [];
+      const existingArgumentsMap = new Map(existingArguments.map((argument: any) => [argument.name, argument]));
+      const mergedArguments = prompt.arguments?.map(argument => {
+        const existingArgument = existingArgumentsMap.get(argument.name) as any;
+        if (existingArgument) {
+          return {
+            ...argument,
+            example: existingArgument.example,
+          };
+        } else {
+          return argument;
+        }
+      });
       if (existingPrompt) {
         return {
           ...prompt,
           tags: existingPrompt.tags,
           security: existingPrompt.security,
+          arguments: mergedArguments,
         };
       }
       return prompt;

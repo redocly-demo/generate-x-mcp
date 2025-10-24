@@ -21148,11 +21148,25 @@ async function main() {
     });
     const mergedPrompts = prompts.map((prompt) => {
       const existingPrompt = existingPromptsMap.get(prompt.name);
+      const existingArguments = existingPrompt?.arguments || [];
+      const existingArgumentsMap = new Map(existingArguments.map((argument) => [argument.name, argument]));
+      const mergedArguments = prompt.arguments?.map((argument) => {
+        const existingArgument = existingArgumentsMap.get(argument.name);
+        if (existingArgument) {
+          return {
+            ...argument,
+            example: existingArgument.example
+          };
+        } else {
+          return argument;
+        }
+      });
       if (existingPrompt) {
         return {
           ...prompt,
           tags: existingPrompt.tags,
-          security: existingPrompt.security
+          security: existingPrompt.security,
+          arguments: mergedArguments
         };
       }
       return prompt;
