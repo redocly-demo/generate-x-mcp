@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { randomUUID } from 'crypto';
 
 const argv = yargs(hideBin(process.argv))
   .option('openapi-file', {
@@ -70,6 +71,10 @@ async function main() {
       if (!('Content-Type' in requestHeaders)) {
         requestHeaders['Content-Type'] = 'application/json';
       }
+      
+      if (!('Mcp-Session-Id' in requestHeaders) && mcp.transport?.sessionId) {
+        requestHeaders['Mcp-Session-Id'] = mcp.transport?.sessionId;
+      }
 
       return fetch(input, {
         ...init,
@@ -78,14 +83,34 @@ async function main() {
     },
   });
 
+  console.log('Connecting to MCP server...');
   await mcp.connect(transport);
+  console.log('Connected');
 
   try {
     // Wait for connection to be established
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const { tools } = await mcp.listTools();
+    console.log('Getting server capabilities...');
     const capabilities = await mcp.getServerCapabilities();
+
+    let tools: Awaited<ReturnType<typeof mcp.listTools>>['tools'] = [];
+    let prompts: Awaited<ReturnType<typeof mcp.listPrompts>>['prompts'] = [];
+    let resources: Awaited<ReturnType<typeof mcp.listResources>>['resources'] = [];
+
+    if (capabilities?.tools) {
+      console.log('Getting tools...');
+      tools = await mcp.listTools().then(result => result.tools);
+    }
+    if (capabilities?.prompts) {
+      console.log('Getting prompts...');
+      prompts = await mcp.listPrompts().then(result => result.prompts);
+    }
+    if (capabilities?.resources) {
+      console.log('Getting resources...');
+      resources = await mcp.listResources().then(result => result.resources);
+    }
+    console.log('Done.');
 
     const openapiFilePath = path.resolve(argv.openapiFile);
     const openapiFileExists = fs.existsSync(openapiFilePath);
@@ -102,7 +127,6 @@ async function main() {
           title: 'Example MCP API',
           description: 'Example MCP API description',
           version: '1.0.0',
-          termsOfService: 'https://redocly.com/subscription-agreement/',
           contact: {
             email: 'example@example.com',
             url: 'https://example.com',
@@ -131,6 +155,10 @@ async function main() {
 
     const existingTools = openapi['x-mcp'].tools || [];
     const existingToolsMap = new Map(existingTools.map((tool: any) => [tool.name, tool]));
+    const existingPrompts = openapi['x-mcp'].prompts || [];
+    const existingPromptsMap = new Map(existingPrompts.map((prompt: any) => [prompt.name, prompt]));
+    const existingResources = openapi['x-mcp'].resources || [];
+    const existingResourcesMap = new Map(existingResources.map((resource: any) => [resource.name, resource]));
 
     const mergedTools = tools.map(tool => {
       const existingTool = existingToolsMap.get(tool.name) as any;
@@ -144,8 +172,39 @@ async function main() {
       return tool;
     });
 
+    const mergedPrompts = prompts.map(prompt => {
+      const existingPrompt = existingPromptsMap.get(prompt.name) as any;
+      if (existingPrompt) {
+        return {
+          ...prompt,
+          tags: existingPrompt.tags,
+          security: existingPrompt.security,
+        };
+      }
+      return prompt;
+    });
+    const mergedResources = resources.map(resource => {
+      const existingResource = existingResourcesMap.get(resource.name) as any;
+      if (existingResource) {
+        return {
+          ...resource,
+          tags: existingResource.tags,
+          security: existingResource.security,
+        };
+      }
+      return resource;
+    });
+
     openapi['x-mcp'].capabilities = capabilities;
-    openapi['x-mcp'].tools = mergedTools;
+    if (mergedTools.length > 0) {
+      openapi['x-mcp'].tools = mergedTools;
+    }
+    if (mergedPrompts.length > 0) {
+      openapi['x-mcp'].prompts = mergedPrompts;
+    }
+    if (mergedResources.length > 0) {
+      openapi['x-mcp'].resources = mergedResources;
+    }
 
     fs.writeFileSync(openapiFilePath, yaml.dump(openapi));
 

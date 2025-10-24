@@ -21062,17 +21062,38 @@ async function main() {
       if (!("Content-Type" in requestHeaders)) {
         requestHeaders["Content-Type"] = "application/json";
       }
+      if (!("Mcp-Session-Id" in requestHeaders) && mcp.transport?.sessionId) {
+        requestHeaders["Mcp-Session-Id"] = mcp.transport?.sessionId;
+      }
       return fetch(input, {
         ...init,
         headers: requestHeaders
       });
     }
   });
+  console.log("Connecting to MCP server...");
   await mcp.connect(transport);
+  console.log("Connected");
   try {
     await new Promise((resolve5) => setTimeout(resolve5, 1e3));
-    const { tools } = await mcp.listTools();
+    console.log("Getting server capabilities...");
     const capabilities = await mcp.getServerCapabilities();
+    let tools = [];
+    let prompts = [];
+    let resources = [];
+    if (capabilities?.tools) {
+      console.log("Getting tools...");
+      tools = await mcp.listTools().then((result) => result.tools);
+    }
+    if (capabilities?.prompts) {
+      console.log("Getting prompts...");
+      prompts = await mcp.listPrompts().then((result) => result.prompts);
+    }
+    if (capabilities?.resources) {
+      console.log("Getting resources...");
+      resources = await mcp.listResources().then((result) => result.resources);
+    }
+    console.log("Done.");
     const openapiFilePath = path.resolve(argv.openapiFile);
     const openapiFileExists = fs.existsSync(openapiFilePath);
     let openapi = {};
@@ -21086,7 +21107,6 @@ async function main() {
           title: "Example MCP API",
           description: "Example MCP API description",
           version: "1.0.0",
-          termsOfService: "https://redocly.com/subscription-agreement/",
           contact: {
             email: "example@example.com",
             url: "https://example.com"
@@ -21111,6 +21131,10 @@ async function main() {
     }
     const existingTools = openapi["x-mcp"].tools || [];
     const existingToolsMap = new Map(existingTools.map((tool) => [tool.name, tool]));
+    const existingPrompts = openapi["x-mcp"].prompts || [];
+    const existingPromptsMap = new Map(existingPrompts.map((prompt) => [prompt.name, prompt]));
+    const existingResources = openapi["x-mcp"].resources || [];
+    const existingResourcesMap = new Map(existingResources.map((resource) => [resource.name, resource]));
     const mergedTools = tools.map((tool) => {
       const existingTool = existingToolsMap.get(tool.name);
       if (existingTool) {
@@ -21122,8 +21146,38 @@ async function main() {
       }
       return tool;
     });
+    const mergedPrompts = prompts.map((prompt) => {
+      const existingPrompt = existingPromptsMap.get(prompt.name);
+      if (existingPrompt) {
+        return {
+          ...prompt,
+          tags: existingPrompt.tags,
+          security: existingPrompt.security
+        };
+      }
+      return prompt;
+    });
+    const mergedResources = resources.map((resource) => {
+      const existingResource = existingResourcesMap.get(resource.name);
+      if (existingResource) {
+        return {
+          ...resource,
+          tags: existingResource.tags,
+          security: existingResource.security
+        };
+      }
+      return resource;
+    });
     openapi["x-mcp"].capabilities = capabilities;
-    openapi["x-mcp"].tools = mergedTools;
+    if (mergedTools.length > 0) {
+      openapi["x-mcp"].tools = mergedTools;
+    }
+    if (mergedPrompts.length > 0) {
+      openapi["x-mcp"].prompts = mergedPrompts;
+    }
+    if (mergedResources.length > 0) {
+      openapi["x-mcp"].resources = mergedResources;
+    }
     fs.writeFileSync(openapiFilePath, js_yaml_default.dump(openapi));
     if (openapiFileExists) {
       console.log(`Successfully updated ${openapiFilePath}`);
